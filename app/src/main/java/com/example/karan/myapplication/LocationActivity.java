@@ -9,6 +9,9 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -28,6 +31,7 @@ public class LocationActivity extends AppCompatActivity implements GoogleApiClie
     public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
     public static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS =
             UPDATE_INTERVAL_IN_MILLISECONDS / 2;
+
     //protected final static String REQUESTING_LOCATION_UPDATES_KEY = "requesting-location-updates-key";
     protected final static String LOCATION_KEY = "location-key";
     protected final static String LAST_UPDATED_TIME_STRING_KEY = "last-updated-time-string-key";
@@ -38,8 +42,36 @@ public class LocationActivity extends AppCompatActivity implements GoogleApiClie
     protected Location mCurrentLocation;
     protected LocationRequest mLocationRequest;
 
+    protected Boolean mRequestingLocationUpdates;
+
+    //UI Stuff
+    protected Button mStartUpdatesButton;
+    protected Button mStopUpdatesButton;
+    protected TextView mLatitudeTextView;
+    protected TextView mLongitudeTextView;
+    protected TextView mLastUpdateTextView;
+
+    protected String mLatitudeLabel;
+    protected String mLongitudeLabel;
+    protected String mLastUpdateLabel;
+
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.location_activity);
+
+        //Locate UI widgets
+        mStartUpdatesButton = (Button) findViewById(R.id.start_updates_button);
+        mStopUpdatesButton = (Button) findViewById(R.id.stop_updates_button);
+        mLatitudeTextView = (TextView) findViewById(R.id.latitude_text);
+        mLongitudeTextView = (TextView) findViewById(R.id.longitude_text);
+        mLastUpdateTextView = (TextView) findViewById(R.id.last_update_text);
+
+        // Set labels.
+        mLatitudeLabel = getResources().getString(R.string.latitude_label);
+        mLongitudeLabel = getResources().getString(R.string.longitude_label);
+        mLastUpdateLabel = getResources().getString(R.string.last_update_time_label);
+
+        mRequestingLocationUpdates = true;
 
 
         // Update values using data stored in the Bundle.
@@ -48,7 +80,7 @@ public class LocationActivity extends AppCompatActivity implements GoogleApiClie
         if ( ContextCompat.checkSelfPermission( this, Manifest.permission.ACCESS_FINE_LOCATION ) != PackageManager.PERMISSION_GRANTED ) {
 
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},MY_PERMISSIONS_REQUEST_FINE_LOCATION
-                    );
+            );
         }
 
 
@@ -56,6 +88,7 @@ public class LocationActivity extends AppCompatActivity implements GoogleApiClie
         // API.
         buildGoogleApiClient();
     }
+
     private void updateValuesFromBundle(Bundle savedInstanceState) {
         Log.i(TAG, "Updating values from bundle");
         if (savedInstanceState != null) {
@@ -75,7 +108,7 @@ public class LocationActivity extends AppCompatActivity implements GoogleApiClie
             if (savedInstanceState.keySet().contains(LAST_UPDATED_TIME_STRING_KEY)) {
                 mLastUpdateTime = savedInstanceState.getString(LAST_UPDATED_TIME_STRING_KEY);
             }
-            //updateUI();
+            updateUI();
         }
     }
 
@@ -109,6 +142,41 @@ public class LocationActivity extends AppCompatActivity implements GoogleApiClie
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
+    /**
+     * Handles the Start Updates button and requests start of location updates. Does nothing if
+     * updates have already been requested.
+     */
+    public void startUpdatesButtonHandler(View view) {
+        if (!mRequestingLocationUpdates) {
+            mRequestingLocationUpdates = true;
+            setButtonsEnabledState();
+            startLocationUpdates();
+        }
+    }
+
+    private void setButtonsEnabledState() {
+        if (mRequestingLocationUpdates) {
+            mStartUpdatesButton.setEnabled(false);
+            mStopUpdatesButton.setEnabled(true);
+        } else {
+            mStartUpdatesButton.setEnabled(true);
+            mStopUpdatesButton.setEnabled(false);
+        }
+    }
+
+    /**
+     * Handles the Stop Updates button, and requests removal of location updates. Does nothing if
+     * updates were not previously requested.
+     */
+    public void stopUpdatesButtonHandler(View view) {
+        if (mRequestingLocationUpdates) {
+            mRequestingLocationUpdates = false;
+            setButtonsEnabledState();
+            stopLocationUpdates();
+        }
+    }
+
+
     protected void startLocationUpdates() {
         // The final argument to {@code requestLocationUpdates()} is a LocationListener
         // (http://developer.android.com/reference/com/google/android/gms/location/LocationListener.html).
@@ -139,7 +207,7 @@ public class LocationActivity extends AppCompatActivity implements GoogleApiClie
         // connection to GoogleApiClient intact.  Here, we resume receiving
         // location updates if the user has requested them.
 
-        if (mGoogleApiClient.isConnected()) {
+        if (mGoogleApiClient.isConnected() && mRequestingLocationUpdates) {
             startLocationUpdates();
         }
     }
@@ -169,9 +237,11 @@ public class LocationActivity extends AppCompatActivity implements GoogleApiClie
             if(permissionCheck != PackageManager.PERMISSION_DENIED) {
                 mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
                 mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+                updateUI();
             }
         }
 
+        if(mRequestingLocationUpdates)
             startLocationUpdates();
 
     }
@@ -183,7 +253,7 @@ public class LocationActivity extends AppCompatActivity implements GoogleApiClie
     public void onLocationChanged(Location location) {
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-        //updateUI();
+        updateUI();
         Toast.makeText(this, getResources().getString(R.string.location_updated_message),
                 Toast.LENGTH_SHORT).show();
     }
@@ -240,7 +310,12 @@ public class LocationActivity extends AppCompatActivity implements GoogleApiClie
     }
 
     private void updateUI() {
-
+        mLatitudeTextView.setText(String.format("%s: %f", mLatitudeLabel,
+                mCurrentLocation.getLatitude()));
+        mLongitudeTextView.setText(String.format("%s: %f", mLongitudeLabel,
+                mCurrentLocation.getLongitude()));
+        mLastUpdateTextView.setText(String.format("%s: %s", mLastUpdateLabel,
+                mLastUpdateTime));
 
     }
 
