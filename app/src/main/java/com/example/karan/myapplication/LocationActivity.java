@@ -317,6 +317,12 @@ public class LocationActivity extends AppCompatActivity implements GoogleApiClie
         mLastUpdateTextView.setText(String.format("%s: %s", mLastUpdateLabel,
                 mLastUpdateTime));
 
+        //PUT THE FUDGING JSON FOR GOOGLE DIRECTIONS ON HERE, FIGURE OUT WHAT TO DO WITH IT LATER WITH KARAN
+
+
+
+
+
     }
 
 
